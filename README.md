@@ -47,10 +47,10 @@ If you need to add a new package to the environment, follow these steps:
     pip install scikit-learn
     ```
 
-3. **Update `requirements.txt`** using `pipreqs`:
+3. **Update `requirements.txt`**:
 
     ```sh
-    pipreqs /path/to/the/project --force
+    pip freeze | grep -v '@ file://' > requirements.txt
     ```
 
 4. **Commit and push the updated `requirements.txt` to the repository**:
@@ -76,4 +76,3 @@ To update your environment with the latest packages, follow these steps:
     ```sh
     pip install -r requirements.txt
     ```
-
