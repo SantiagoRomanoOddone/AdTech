@@ -95,7 +95,7 @@ with DAG(
         python_callable=write_to_db,
         op_kwargs={
             'top_ctr_path': f'{temp_folder}/top_ctr.csv',
-            'top_product_path': f'{temp_folder}/top_product.csv',
+            'top_product_path': f'{temp_folder}/top_products.csv',
             'db_config': db_config,
         },
     )
