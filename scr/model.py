@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import psycopg2
 
 def ensure_temp_folder_exists(folder_path: str):
     """Ensure that the temporary folder exists."""
@@ -48,9 +49,66 @@ def compute_top_product(active_product_views_path: str, output_folder: str) -> s
     top_products.to_csv(output_path, index=False)
     return output_path
 
-# TODO: Implement write_to_db function
-def write_to_db():
-    """Write results to the database."""
+
+
+def write_to_db(top_ctr_path: str, top_product_path: str, db_config: dict):
+    """Write model results to PostgreSQL database."""
+    # Load the results from CSV
+    top_ctr = pd.read_csv(top_ctr_path)
+    top_product = pd.read_csv(top_product_path)
+
+    # Connect to PostgreSQL
+    try:
+        connection = psycopg2.connect(**db_config)
+        cursor = connection.cursor()
+        
+        # Create table for TopCTR if it doesn't exist
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS top_ctr (
+            advertiser_id INT,
+            product_id INT,
+            ctr FLOAT,
+            PRIMARY KEY (advertiser_id, product_id)
+        );
+        """)
+
+        # Insert TopCTR results
+        for _, row in top_ctr.iterrows():
+            cursor.execute("""
+            INSERT INTO top_ctr (advertiser_id, product_id, ctr)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (advertiser_id, product_id) DO UPDATE
+            SET ctr = EXCLUDED.ctr;
+            """, (row['advertiser_id'], row['product_id'], row['ctr']))
+
+        # Create table for TopProducts if it doesn't exist
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS top_product (
+            advertiser_id INT,
+            product_id INT,
+            view_count INT,
+            PRIMARY KEY (advertiser_id, product_id)
+        );
+        """)
+
+        # Insert TopProducts results
+        for _, row in top_product.iterrows():
+            cursor.execute("""
+            INSERT INTO top_product (advertiser_id, product_id, view_count)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (advertiser_id, product_id) DO UPDATE
+            SET view_count = EXCLUDED.view_count;
+            """, (row['advertiser_id'], row['product_id'], row['view_count']))
+
+        # Commit changes
+        connection.commit()
+    except Exception as e:
+        print("Error writing to database:", e)
+    finally:
+        if connection:
+            cursor.close()
+            connection.close()
+
 
 
 if __name__ == '__main__':
@@ -58,17 +116,17 @@ if __name__ == '__main__':
     advertiser_path = 'data/advertiser_ids.csv'
     product_views_path = 'data/product_views.csv'
     
-    # Temporary results folder
-    temp_folder = 'data/temp'
-    ensure_temp_folder_exists(temp_folder)
+    # # Temporary results folder
+    # temp_folder = 'data/temp'
+    # ensure_temp_folder_exists(temp_folder)
 
-    # Filter and compute tasks
-    active_ads_views_path = filter_active_advertiser_views(ads_view_path, advertiser_path, temp_folder)
-    active_product_views_path = filter_active_advertiser_products(product_views_path, advertiser_path, temp_folder)
+    # # Filter and compute tasks
+    # active_ads_views_path = filter_active_advertiser_views(ads_view_path, advertiser_path, temp_folder)
+    # active_product_views_path = filter_active_advertiser_products(product_views_path, advertiser_path, temp_folder)
 
-    top_ctr_path = compute_top_ctr(active_ads_views_path, temp_folder)
-    top_products_path = compute_top_product(active_product_views_path, temp_folder)
+    # top_ctr_path = compute_top_ctr(active_ads_views_path, temp_folder)
+    # top_products_path = compute_top_product(active_product_views_path, temp_folder)
 
-    print(f"Results saved to temporary folder: {temp_folder}")
+    # print(f"Results saved to temporary folder: {temp_folder}")
 
 

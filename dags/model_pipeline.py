@@ -80,18 +80,28 @@ with DAG(
         },
     )
 
-    # # Task 5: Write results to the database
-    # write_to_db_task = PythonOperator(
-    #     task_id='write_to_db',
-    #     python_callable=write_to_db,
-    #     op_kwargs={
-    #         'top_ctr_path': "{{ ti.xcom_pull(task_ids='compute_top_ctr') }}",
-    #         'top_product_path': "{{ ti.xcom_pull(task_ids='compute_top_products') }}",
-    #     },
-    # )
-
+    # Task 5: Write results to the database
+    # Database configuration
+    db_config = {
+        'database': 'postgres',
+        'user': 'postgres',
+        'password': 'AdTech',
+        'host': 'grupo-1-rds.cf4i6e6cwv74.us-east-1.rds.amazonaws.com',
+        'port': '5432',
+    }
+    # Task 5: Write results to the database
+    write_to_db_task = PythonOperator(
+        task_id='write_to_db',
+        python_callable=write_to_db,
+        op_kwargs={
+            'top_ctr_path': f'{temp_folder}/top_ctr.csv',
+            'top_product_path': f'{temp_folder}/top_product.csv',
+            'db_config': db_config,
+        },
+    )
+    
     # Define dependencies
     temp_folder_task >> [filter_views_task, filter_products_task]
     filter_views_task >> compute_top_ctr_task
     filter_products_task >> compute_top_product_task
-    #[compute_top_ctr_task, compute_top_product_task] >> write_to_db_task
+    [compute_top_ctr_task, compute_top_product_task] >> write_to_db_task
