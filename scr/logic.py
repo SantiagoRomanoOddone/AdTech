@@ -28,6 +28,10 @@ def compute_top_product(active_product_views: pd.DataFrame) -> pd.DataFrame:
     
     return top_product.groupby('advertiser_id').apply(lambda x: x.nlargest(20, 'view_count')).reset_index(drop=True)
 
+# TODO: Implement write_to_db function
+def write_to_db():
+    """Write results to the database."""
+
 
 if __name__ == '__main__':
     ads_view_path = 'data/ads_views.csv'
@@ -39,5 +43,5 @@ if __name__ == '__main__':
 
     top_ctr = compute_top_ctr(active_ads_views)
     top_product = compute_top_product(active_product_views)
-    print(top_product)
+
 
