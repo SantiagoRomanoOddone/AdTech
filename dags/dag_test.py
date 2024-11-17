@@ -28,3 +28,22 @@ with DAG(
             python_callable=sample_normal, # The function to execute without the parameters
             op_kwargs = {"mean" : 170, "std": 15}, # parameters to pass to the function
         )
+        
+        # Create 2 dummy tasks to define dependencies
+        first = BashOperator(task_id='first', bash_command='sleep 3 && echo First')
+        last = BashOperator(task_id='last', bash_command='sleep 3 && echo Last')
+
+        # Using the >> operator to define dependencies, a >> b means b runs after a finishes
+        first >> sleep
+        first >> random_height
+
+        # We can group multiple tasks when defining precedences
+        [sleep, random_height] >> last
+
+        # Any task defined within the 'with' clause will be part of the group
+        with TaskGroup(group_id="post_process") as post_process_group:
+            for i in range(5):
+                EmptyOperator(task_id=f"dummy_task_{i}")
+
+        # We can define dependencies at the task group level
+        last >> post_process_group
