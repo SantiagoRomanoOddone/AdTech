@@ -47,10 +47,10 @@ If you need to add a new package to the environment, follow these steps:
     pip install scikit-learn
     ```
 
-3. **Update `requirements.txt`**:
+3. **Update `requirements.txt`** using `pipreqs`:
 
     ```sh
-    pip freeze > requirements.txt
+    pipreqs /path/to/the/project --force
     ```
 
 4. **Commit and push the updated `requirements.txt` to the repository**:
