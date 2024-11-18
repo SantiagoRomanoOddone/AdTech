@@ -85,7 +85,7 @@ with DAG(
     db_config = {
         'database': 'postgres',
         'user': 'postgres',
-        'password': 'AdTech',
+        'password': 'grupo-1-AdTech',
         'host': 'grupo-1-rds.cf4i6e6cwv74.us-east-1.rds.amazonaws.com',
         'port': '5432',
     }
