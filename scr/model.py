@@ -112,21 +112,6 @@ def write_to_db(top_ctr_path: str, top_product_path: str, db_config: dict):
 
 
 if __name__ == '__main__':
-    ads_view_path = 'data/ads_views.csv'
-    advertiser_path = 'data/advertiser_ids.csv'
-    product_views_path = 'data/product_views.csv'
-    
-    # # Temporary results folder
-    # temp_folder = 'data/temp'
-    # ensure_temp_folder_exists(temp_folder)
-
-    # # Filter and compute tasks
-    # active_ads_views_path = filter_active_advertiser_views(ads_view_path, advertiser_path, temp_folder)
-    # active_product_views_path = filter_active_advertiser_products(product_views_path, advertiser_path, temp_folder)
-
-    # top_ctr_path = compute_top_ctr(active_ads_views_path, temp_folder)
-    # top_products_path = compute_top_product(active_product_views_path, temp_folder)
-
-    # print(f"Results saved to temporary folder: {temp_folder}")
+    pass
 
 
