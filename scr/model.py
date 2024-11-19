@@ -1,4 +1,5 @@
 import os
+import datetime
 import pandas as pd
 import psycopg2
 
@@ -35,6 +36,8 @@ def compute_top_ctr(active_ads_views_path: str, output_folder: str) -> str:
     ctr.columns = ['advertiser_id', 'product_id', 'ctr']
     
     top_ctr = ctr.groupby('advertiser_id').apply(lambda x: x.nlargest(20, 'ctr')).reset_index(drop=True)
+    top_ctr['date'] = datetime.now().date()
+    top_ctr['model'] = 'top_ctr'
     output_path = os.path.join(output_folder, 'top_ctr.csv')
     top_ctr.to_csv(output_path, index=False)
     return output_path
@@ -45,13 +48,15 @@ def compute_top_product(active_product_views_path: str, output_folder: str) -> s
     top_product = active_product_views.groupby(['advertiser_id', 'product_id']).size().reset_index(name='view_count')
     
     top_products = top_product.groupby('advertiser_id').apply(lambda x: x.nlargest(20, 'view_count')).reset_index(drop=True)
+    top_products['date'] = datetime.now().date()
+    top_products['model'] = 'top_product'
     output_path = os.path.join(output_folder, 'top_products.csv')
     top_products.to_csv(output_path, index=False)
     return output_path
 
 
 
-def write_to_db(top_ctr_path: str, top_product_path: str, db_config: dict):
+def write_to_db(top_ctr_path: str, top_product_path: str, db_config: dict, date: datetime):
     """Write model results to PostgreSQL database."""
     # Load the results from CSV
     top_ctr = pd.read_csv(top_ctr_path)
@@ -62,43 +67,35 @@ def write_to_db(top_ctr_path: str, top_product_path: str, db_config: dict):
         connection = psycopg2.connect(**db_config)
         cursor = connection.cursor()
         
-        # Create table for TopCTR if it doesn't exist
+        # Create table for recommendations if it doesn't exist
         cursor.execute("""
-        CREATE TABLE IF NOT EXISTS top_ctr (
+        CREATE TABLE IF NOT EXISTS recommendations (
             advertiser_id INT,
             product_id INT,
-            ctr FLOAT,
-            PRIMARY KEY (advertiser_id, product_id)
+            metric FLOAT,
+            date DATE,
+            model VARCHAR(20),
+            PRIMARY KEY (advertiser_id, product_id, model)
         );
         """)
 
         # Insert TopCTR results
         for _, row in top_ctr.iterrows():
             cursor.execute("""
-            INSERT INTO top_ctr (advertiser_id, product_id, ctr)
-            VALUES (%s, %s, %s)
-            ON CONFLICT (advertiser_id, product_id) DO UPDATE
-            SET ctr = EXCLUDED.ctr;
-            """, (row['advertiser_id'], row['product_id'], row['ctr']))
-
-        # Create table for TopProducts if it doesn't exist
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS top_product (
-            advertiser_id INT,
-            product_id INT,
-            view_count INT,
-            PRIMARY KEY (advertiser_id, product_id)
-        );
-        """)
+            INSERT INTO recommendations (advertiser_id, product_id, metric, date, model)
+            VALUES (%s, %s, %s, %s, %s)
+            ON CONFLICT (advertiser_id, product_id, model)
+            DO UPDATE SET metric = EXCLUDED.metric, date = EXCLUDED.date;
+            """, (row['advertiser_id'], row['product_id'], row['ctr'], date, row['model']))
 
         # Insert TopProducts results
         for _, row in top_product.iterrows():
             cursor.execute("""
-            INSERT INTO top_product (advertiser_id, product_id, view_count)
-            VALUES (%s, %s, %s)
-            ON CONFLICT (advertiser_id, product_id) DO UPDATE
-            SET view_count = EXCLUDED.view_count;
-            """, (row['advertiser_id'], row['product_id'], row['view_count']))
+            INSERT INTO recommendations (advertiser_id, product_id, metric, date, model)
+            VALUES (%s, %s, %s, %s, %s)
+            ON CONFLICT (advertiser_id, product_id, model)
+            DO UPDATE SET metric = EXCLUDED.metric, date = EXCLUDED.date;
+            """, (row['advertiser_id'], row['product_id'], row['view_count'], date, 'top_product'))
 
         # Commit changes
         connection.commit()

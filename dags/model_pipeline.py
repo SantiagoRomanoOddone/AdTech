@@ -3,6 +3,7 @@ from airflow.models.dag import DAG
 from airflow.operators.python import PythonOperator
 import sys
 import os
+from dotenv import load_dotenv
 
 # Adding the parent directory of 'scr' to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -82,8 +83,14 @@ with DAG(
 
     # Task 5: Write results to the database
     # Database configuration
-    db_config = {
+    load_dotenv()
 
+    DB_CONFIG = {
+        'dbname': os.getenv('DB_NAME'),
+        'user': os.getenv('DB_USER'),
+        'password': os.getenv('DB_PASSWORD'),
+        'host': os.getenv('DB_HOST'),
+        'port': int(os.getenv('DB_PORT'))
     }
     # Task 5: Write results to the database
     write_to_db_task = PythonOperator(
@@ -92,7 +99,7 @@ with DAG(
         op_kwargs={
             'top_ctr_path': f'{temp_folder}/top_ctr.csv',
             'top_product_path': f'{temp_folder}/top_products.csv',
-            'db_config': db_config,
+            'db_config':  DB_CONFIG,
         },
     )
     
