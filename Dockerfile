@@ -1,10 +1,13 @@
-# Use the official Python slim image as the base
-FROM python:3.10-slim-bullseye
+# Usa la imagen oficial de Python slim como base
+FROM python:3.9-slim-bullseye
 
-# Set the working directory in the container
+# Establecer el directorio de trabajo en el contenedor
 WORKDIR /app
 
-# Install system dependencies required to build Python packages
+# Copiar requirements.txt al contenedor
+COPY requirements.txt .
+
+# Instalar dependencias del sistema necesarias para construir paquetes de Python
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     python3-dev \
@@ -12,19 +15,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements.txt into the container
-COPY requirements.txt .
-
-# Install the dependencies
+# Instalar las dependencias de Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the entire "app" directory into the container
+# Copiar el directorio "app" al contenedor
 COPY ./app ./app
 
-# Expose the port FastAPI will run on
+# Copy the .env file into the container
+COPY .env /app/.env
+
+# Exponer el puerto en el que FastAPI se ejecutará
 EXPOSE 8000
 
-# Set the entrypoint and command to run Uvicorn
+# Establecer el punto de entrada y el comando para ejecutar Uvicorn
 CMD ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000"]
-
-
