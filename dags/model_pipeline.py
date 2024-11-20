@@ -23,6 +23,7 @@ advertiser_path = 'data/advertiser_ids.csv'
 product_views_path = 'data/product_views.csv'
 temp_folder = 'data/temp'
 
+# TODO: save data in S3
 # Define the DAG
 with DAG(
     dag_id='models_pipeline',
