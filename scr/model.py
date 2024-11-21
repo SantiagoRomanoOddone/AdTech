@@ -1,5 +1,5 @@
 import os
-import datetime
+from datetime import datetime
 import pandas as pd
 import psycopg2
 
@@ -36,7 +36,7 @@ def compute_top_ctr(active_ads_views_path: str, output_folder: str) -> str:
     ctr.columns = ['advertiser_id', 'product_id', 'ctr']
     
     top_ctr = ctr.groupby('advertiser_id').apply(lambda x: x.nlargest(20, 'ctr')).reset_index(drop=True)
-    top_ctr['date'] = datetime.now().date()
+    top_ctr['date'] = datetime.today().date()
     top_ctr['model'] = 'top_ctr'
     output_path = os.path.join(output_folder, 'top_ctr.csv')
     top_ctr.to_csv(output_path, index=False)
@@ -48,7 +48,7 @@ def compute_top_product(active_product_views_path: str, output_folder: str) -> s
     top_product = active_product_views.groupby(['advertiser_id', 'product_id']).size().reset_index(name='view_count')
     
     top_products = top_product.groupby('advertiser_id').apply(lambda x: x.nlargest(20, 'view_count')).reset_index(drop=True)
-    top_products['date'] = datetime.now().date()
+    top_products['date'] = datetime.today().date()
     top_products['model'] = 'top_product'
     output_path = os.path.join(output_folder, 'top_products.csv')
     top_products.to_csv(output_path, index=False)
@@ -56,7 +56,7 @@ def compute_top_product(active_product_views_path: str, output_folder: str) -> s
 
 
 
-def write_to_db(top_ctr_path: str, top_product_path: str, db_config: dict, date: datetime):
+def write_to_db(top_ctr_path: str, top_product_path: str, db_config: dict):
     """Write model results to PostgreSQL database."""
     # Load the results from CSV
     top_ctr = pd.read_csv(top_ctr_path)
@@ -86,7 +86,7 @@ def write_to_db(top_ctr_path: str, top_product_path: str, db_config: dict, date:
             VALUES (%s, %s, %s, %s, %s)
             ON CONFLICT (advertiser_id, product_id, model)
             DO UPDATE SET metric = EXCLUDED.metric, date = EXCLUDED.date;
-            """, (row['advertiser_id'], row['product_id'], row['ctr'], date, row['model']))
+            """, (row['advertiser_id'], row['product_id'], row['ctr'], row['date'], row['model']))
 
         # Insert TopProducts results
         for _, row in top_product.iterrows():
@@ -95,7 +95,7 @@ def write_to_db(top_ctr_path: str, top_product_path: str, db_config: dict, date:
             VALUES (%s, %s, %s, %s, %s)
             ON CONFLICT (advertiser_id, product_id, model)
             DO UPDATE SET metric = EXCLUDED.metric, date = EXCLUDED.date;
-            """, (row['advertiser_id'], row['product_id'], row['view_count'], date, 'top_product'))
+            """, (row['advertiser_id'], row['product_id'], row['view_count'], row['date'], 'top_product'))
 
         # Commit changes
         connection.commit()
