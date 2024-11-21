@@ -94,6 +94,11 @@ with DAG(
         'port': int(os.getenv('DB_PORT'))
     }
     # Task 5: Write results to the database
+    # For testing purposes, we will use a SQLite database
+    DB_CONFIG = {
+        'dbname': 'test_database.db'
+    }
+
     write_to_db_task = PythonOperator(
         task_id='write_to_db',
         python_callable=write_to_db,
@@ -101,6 +106,7 @@ with DAG(
             'top_ctr_path': f'{temp_folder}/top_ctr.csv',
             'top_product_path': f'{temp_folder}/top_products.csv',
             'db_config':  DB_CONFIG,
+            'test': True
         },
     )
     

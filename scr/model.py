@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+import sqlite3
 import pandas as pd
 import psycopg2
 
@@ -56,7 +57,7 @@ def compute_top_product(active_product_views_path: str, output_folder: str) -> s
 
 
 
-def write_to_db(top_ctr_path: str, top_product_path: str, db_config: dict):
+def write_to_db(top_ctr_path: str, top_product_path: str, db_config: dict, test: bool = False):
     """Write model results to PostgreSQL database."""
     # Load the results from CSV
     top_ctr = pd.read_csv(top_ctr_path)
@@ -64,7 +65,10 @@ def write_to_db(top_ctr_path: str, top_product_path: str, db_config: dict):
 
     # Connect to PostgreSQL
     try:
-        connection = psycopg2.connect(**db_config)
+        if test:
+            connection = sqlite3.connect(db_config['dbname'])
+        else:
+            connection = psycopg2.connect(**db_config)
         cursor = connection.cursor()
         
         # Create table for recommendations if it doesn't exist
