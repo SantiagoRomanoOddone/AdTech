@@ -96,11 +96,6 @@ with DAG(
         'host': os.getenv('DB_HOST'),
         'port': int(os.getenv('DB_PORT'))
     }
-    # Task 5: Write results to the database
-    # For testing purposes, we will use a SQLite database
-    DB_CONFIG = {
-        'dbname': 'test_database.db'
-    }
 
     write_to_db_task = PythonOperator(
         task_id='write_to_db',
