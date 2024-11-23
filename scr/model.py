@@ -100,7 +100,7 @@ def insert_recommendations(cursor, data, metric_column, date_format='%Y-%m-%d'):
         try:
             advertiser_id = str(row['advertiser_id'])
             product_id = str(row['product_id'])
-            metric = float(row[metric_column])
+            metric = round(float(row[metric_column]), 5)
             date = datetime.strptime(row['date'], date_format)  # Adjust the date format as needed
             model = row['model']
             cursor.execute("""
