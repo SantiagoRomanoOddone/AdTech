@@ -1,8 +1,8 @@
 import os
 from datetime import datetime
-import sqlite3
 import pandas as pd
 import psycopg2
+from dotenv import load_dotenv
 
 def ensure_temp_folder_exists(folder_path: str):
     """Ensure that the temporary folder exists."""
@@ -57,7 +57,7 @@ def compute_top_product(active_product_views_path: str, output_folder: str) -> s
 
 
 
-def write_to_db(top_ctr_path: str, top_product_path: str, db_config: dict, test: bool = False):
+def write_to_db(top_ctr_path: str, top_product_path: str, db_config: dict):
     """Write model results to PostgreSQL database."""
     # Load the results from CSV
     top_ctr = pd.read_csv(top_ctr_path)
@@ -65,17 +65,14 @@ def write_to_db(top_ctr_path: str, top_product_path: str, db_config: dict, test:
 
     # Connect to PostgreSQL
     try:
-        if test:
-            connection = sqlite3.connect(db_config['dbname'])
-        else:
-            connection = psycopg2.connect(**db_config)
+        connection = psycopg2.connect(**db_config)
         cursor = connection.cursor()
         
         # Create table for recommendations if it doesn't exist
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS recommendations (
-            advertiser_id INT,
-            product_id INT,
+            advertiser_id VARCHAR(20),
+            product_id VARCHAR(20),
             metric FLOAT,
             date DATE,
             model VARCHAR(20),
@@ -83,23 +80,11 @@ def write_to_db(top_ctr_path: str, top_product_path: str, db_config: dict, test:
         );
         """)
 
-        # Insert TopCTR results
-        for _, row in top_ctr.iterrows():
-            cursor.execute("""
-            INSERT INTO recommendations (advertiser_id, product_id, metric, date, model)
-            VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (advertiser_id, product_id, model)
-            DO UPDATE SET metric = EXCLUDED.metric, date = EXCLUDED.date;
-            """, (row['advertiser_id'], row['product_id'], row['ctr'], row['date'], row['model']))
+       # Insert TopCTR results
+        insert_recommendations(cursor, top_ctr, 'ctr')
 
         # Insert TopProducts results
-        for _, row in top_product.iterrows():
-            cursor.execute("""
-            INSERT INTO recommendations (advertiser_id, product_id, metric, date, model)
-            VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (advertiser_id, product_id, model)
-            DO UPDATE SET metric = EXCLUDED.metric, date = EXCLUDED.date;
-            """, (row['advertiser_id'], row['product_id'], row['view_count'], row['date'], 'top_product'))
+        insert_recommendations(cursor, top_product, 'view_count')
 
         # Commit changes
         connection.commit()
@@ -110,9 +95,62 @@ def write_to_db(top_ctr_path: str, top_product_path: str, db_config: dict, test:
             cursor.close()
             connection.close()
 
-
+def insert_recommendations(cursor, data, metric_column, date_format='%Y-%m-%d'):
+    for _, row in data.iterrows():
+        try:
+            advertiser_id = str(row['advertiser_id'])
+            product_id = str(row['product_id'])
+            metric = float(row[metric_column])
+            date = datetime.strptime(row['date'], date_format)  # Adjust the date format as needed
+            model = row['model']
+            cursor.execute("""
+            INSERT INTO recommendations (advertiser_id, product_id, metric, date, model)
+            VALUES (%s, %s, %s, %s, %s)
+            ON CONFLICT (advertiser_id, product_id, model)
+            DO UPDATE SET metric = EXCLUDED.metric, date = EXCLUDED.date;
+            """, (advertiser_id, product_id, metric, date, model))
+        except ValueError as e:
+            print(f"Skipping row due to error: {e}")
 
 if __name__ == '__main__':
-    pass
+    # Load the appropriate .env file based on the environment
+    load_dotenv()
+
+    DB_CONFIG = {
+        'dbname': os.getenv('DB_NAME'),
+        'user': os.getenv('DB_USER'),
+        'password': os.getenv('DB_PASSWORD'),
+        'host': os.getenv('DB_HOST'),
+        'port': int(os.getenv('DB_PORT'))
+    }
+    
+    # Paths
+    ads_views_path = 'data/ads_views.csv'
+    advertiser_path = 'data/advertiser_ids.csv'
+    product_views_path = 'data/product_views.csv'
+    temp_folder = 'data/temp'
+
+    # Ensure temp folder exists
+    ensure_temp_folder_exists(temp_folder)
+    
+    # Test filter_active_advertiser_views
+    active_ads_views_path = filter_active_advertiser_views(ads_views_path, advertiser_path, temp_folder)
+    print(f"Active advertiser views saved to: {active_ads_views_path}")
+    
+    # Test filter_active_advertiser_products
+    active_product_views_path = filter_active_advertiser_products(product_views_path, advertiser_path, temp_folder)
+    print(f"Active advertiser products saved to: {active_product_views_path}")
+    
+    # Test compute_top_ctr
+    top_ctr_path = compute_top_ctr(active_ads_views_path, temp_folder)
+    print(f"TopCTR results saved to: {top_ctr_path}")
+    
+    # Test compute_top_product
+    top_product_path = compute_top_product(active_product_views_path, temp_folder)
+    print(f"TopProduct results saved to: {top_product_path}")
+    
+
+    write_to_db(top_ctr_path, top_product_path, DB_CONFIG)
+    print("Results written to database.")
 
 
