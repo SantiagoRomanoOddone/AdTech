@@ -2,3 +2,4 @@
 .env
 grupo-1-keypair.pem
 *.csv
+*.pyc
