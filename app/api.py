@@ -28,7 +28,7 @@ def get_db_connection():
 
 # Endpoint: /recommendations/<ADV>/<Modelo>
 @app.get("/recommendations/{adv}/{model}")
-def get_recommendations(adv: int, model: str):
+def get_recommendations(adv: str, model: str):
     connection = get_db_connection()
     try:
         cursor = connection.cursor(cursor_factory=RealDictCursor)
@@ -91,7 +91,7 @@ def get_stats():
 
 # Endpoint: /history/<ADV>/
 @app.get("/history/{adv}")
-def get_history(adv: int):
+def get_history(adv: str):
     connection = get_db_connection()
     try:
         cursor = connection.cursor(cursor_factory=RealDictCursor)

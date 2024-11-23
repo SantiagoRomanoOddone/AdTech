@@ -5,6 +5,9 @@ import sys
 import os
 from dotenv import load_dotenv
 
+project_path = '/Users/santiagoromano/Documents/code/AdTech'
+os.chdir(project_path)
+
 # Adding the parent directory of 'scr' to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -18,10 +21,10 @@ from scr.model import (
 )
 
 # Paths
-ads_views_path = 'data/ads_views.csv'
-advertiser_path = 'data/advertiser_ids.csv'
-product_views_path = 'data/product_views.csv'
-temp_folder = 'data/temp'
+ads_views_path = 'tmp/data/ads_views.csv'
+advertiser_path = 'tmp/data/advertiser_ids.csv'
+product_views_path = 'tmp/data/product_views.csv'
+temp_folder = 'tmp/temp_data'
 
 # TODO: save data in S3
 # Define the DAG
