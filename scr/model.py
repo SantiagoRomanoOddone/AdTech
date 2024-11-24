@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 import psycopg2
 from dotenv import load_dotenv
@@ -76,7 +76,7 @@ def write_to_db(top_ctr_path: str, top_product_path: str, db_config: dict):
             metric FLOAT,
             date DATE,
             model VARCHAR(20),
-            PRIMARY KEY (advertiser_id, product_id, model)
+            PRIMARY KEY (advertiser_id, product_id, model, date)
         );
         """)
 
@@ -106,7 +106,7 @@ def insert_recommendations(cursor, data, metric_column, date_format='%Y-%m-%d'):
             cursor.execute("""
             INSERT INTO recommendations (advertiser_id, product_id, metric, date, model)
             VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (advertiser_id, product_id, model)
+            ON CONFLICT (advertiser_id, product_id, model, date)
             DO UPDATE SET metric = EXCLUDED.metric, date = EXCLUDED.date;
             """, (advertiser_id, product_id, metric, date, model))
         except ValueError as e:
