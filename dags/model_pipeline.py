@@ -32,7 +32,7 @@ with DAG(
     dag_id='models_pipeline',
     # schedule_interval='@daily',  # Schedule to run daily
     start_date=datetime.datetime(2024, 11, 24),  # Start date of the DAG
-    catchup=True,  # False: Do not backfill missing runs
+    catchup=False,  # False: Do not backfill missing runs
 ) as dag:
     # Task 0: Create temporary folder if it does not exist
     temp_folder_task = PythonOperator(

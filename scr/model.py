@@ -51,7 +51,7 @@ def compute_top_product(active_product_views_path: str, output_folder: str, exec
     
     top_products = top_product.groupby('advertiser_id').apply(lambda x: x.nlargest(20, 'view_count')).reset_index(drop=True)
     # top_products['date'] = datetime.today().date()
-    top_products['date'] = execution_date
+    top_products['date'] = execution_date.date()
     top_products['model'] = 'top_product'
     output_path = os.path.join(output_folder, 'top_products.csv')
     top_products.to_csv(output_path, index=False)
