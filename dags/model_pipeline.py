@@ -30,9 +30,9 @@ temp_folder = 'tmp/temp_data'
 # Define the DAG
 with DAG(
     dag_id='models_pipeline',
-    schedule_interval='@daily',  # Schedule to run daily
-    start_date=datetime.datetime(2024, 11, 17),  # Start date of the DAG
-    catchup=False,  # Do not backfill missing runs
+    # schedule_interval='@daily',  # Schedule to run daily
+    start_date=datetime.datetime(2024, 11, 24),  # Start date of the DAG
+    catchup=True,  # False: Do not backfill missing runs
 ) as dag:
     # Task 0: Create temporary folder if it does not exist
     temp_folder_task = PythonOperator(
@@ -69,6 +69,7 @@ with DAG(
     compute_top_ctr_task = PythonOperator(
         task_id='compute_top_ctr',
         python_callable=compute_top_ctr,
+        provide_context=True,  # Pass execution_date to the callable
         op_kwargs={
             'active_ads_views_path': "{{ ti.xcom_pull(task_ids='filter_active_advertiser_views') }}",
             'output_folder': temp_folder,
@@ -79,6 +80,7 @@ with DAG(
     compute_top_product_task = PythonOperator(
         task_id='compute_top_products',
         python_callable=compute_top_product,
+        provide_context=True,  
         op_kwargs={
             'active_product_views_path': "{{ ti.xcom_pull(task_ids='filter_active_advertiser_products') }}",
             'output_folder': temp_folder,
@@ -100,6 +102,7 @@ with DAG(
     write_to_db_task = PythonOperator(
         task_id='write_to_db',
         python_callable=write_to_db,
+        provide_context=True, 
         op_kwargs={
             'top_ctr_path': f'{temp_folder}/top_ctr.csv',
             'top_product_path': f'{temp_folder}/top_products.csv',

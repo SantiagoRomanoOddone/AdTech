@@ -29,7 +29,7 @@ def filter_active_advertiser_products(product_views_path: str, advertiser_path: 
     filtered_products.to_csv(output_path, index=False)
     return output_path
 
-def compute_top_ctr(active_ads_views_path: str, output_folder: str) -> str:
+def compute_top_ctr(active_ads_views_path: str, output_folder: str, execution_date: datetime.date) -> str:
     """Compute TopCTR model and write results to a temporary folder."""
     active_ads_views = pd.read_csv(active_ads_views_path)
     active_ads_views['is_click'] = (active_ads_views['type'] == 'click').astype(int)
@@ -37,19 +37,21 @@ def compute_top_ctr(active_ads_views_path: str, output_folder: str) -> str:
     ctr.columns = ['advertiser_id', 'product_id', 'ctr']
     
     top_ctr = ctr.groupby('advertiser_id').apply(lambda x: x.nlargest(20, 'ctr')).reset_index(drop=True)
-    top_ctr['date'] = datetime.today().date()
+    # top_ctr['date'] = datetime.today().date()
+    top_ctr['date'] = execution_date.date()
     top_ctr['model'] = 'top_ctr'
     output_path = os.path.join(output_folder, 'top_ctr.csv')
     top_ctr.to_csv(output_path, index=False)
     return output_path
 
-def compute_top_product(active_product_views_path: str, output_folder: str) -> str:
+def compute_top_product(active_product_views_path: str, output_folder: str, execution_date: datetime.date) -> str:
     """Compute TopProduct model and write results to a temporary folder."""
     active_product_views = pd.read_csv(active_product_views_path)
     top_product = active_product_views.groupby(['advertiser_id', 'product_id']).size().reset_index(name='view_count')
     
     top_products = top_product.groupby('advertiser_id').apply(lambda x: x.nlargest(20, 'view_count')).reset_index(drop=True)
-    top_products['date'] = datetime.today().date()
+    # top_products['date'] = datetime.today().date()
+    top_products['date'] = execution_date
     top_products['model'] = 'top_product'
     output_path = os.path.join(output_folder, 'top_products.csv')
     top_products.to_csv(output_path, index=False)
@@ -113,8 +115,10 @@ def insert_recommendations(cursor, data, metric_column, date_format='%Y-%m-%d'):
             print(f"Skipping row due to error: {e}")
 
 if __name__ == '__main__':
+
     # Load the appropriate .env file based on the environment
     load_dotenv()
+    execution_date = datetime(2024,11,26)
 
     DB_CONFIG = {
         'dbname': os.getenv('DB_NAME'),
@@ -125,10 +129,10 @@ if __name__ == '__main__':
     }
     
     # Paths
-    ads_views_path = 'data/ads_views.csv'
-    advertiser_path = 'data/advertiser_ids.csv'
-    product_views_path = 'data/product_views.csv'
-    temp_folder = 'data/temp'
+    ads_views_path = 'tmp/data/ads_views.csv'
+    advertiser_path = 'tmp/data/advertiser_ids.csv'
+    product_views_path = 'tmp/data/product_views.csv'
+    temp_folder = 'tmp/temp_data'
 
     # Ensure temp folder exists
     ensure_temp_folder_exists(temp_folder)
@@ -142,13 +146,12 @@ if __name__ == '__main__':
     print(f"Active advertiser products saved to: {active_product_views_path}")
     
     # Test compute_top_ctr
-    top_ctr_path = compute_top_ctr(active_ads_views_path, temp_folder)
+    top_ctr_path = compute_top_ctr(active_ads_views_path, temp_folder, execution_date)
     print(f"TopCTR results saved to: {top_ctr_path}")
     
     # Test compute_top_product
-    top_product_path = compute_top_product(active_product_views_path, temp_folder)
+    top_product_path = compute_top_product(active_product_views_path, temp_folder, execution_date)
     print(f"TopProduct results saved to: {top_product_path}")
-    
 
     write_to_db(top_ctr_path, top_product_path, DB_CONFIG)
     print("Results written to database.")
