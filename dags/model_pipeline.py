@@ -30,9 +30,10 @@ temp_folder = 'tmp/temp_data'
 # Define the DAG
 with DAG(
     dag_id='models_pipeline',
-    # schedule_interval='@daily',  # Schedule to run daily
-    start_date=datetime.datetime(2024, 11, 24),  # Start date of the DAG
-    catchup=False,  # False: Do not backfill missing runs
+    schedule_interval='@daily',  # Schedule to run daily
+    start_date=datetime.datetime(2024, 11, 20),  # Start date of the DAG
+    catchup=True,  # False: Do not backfill missing runs
+    max_active_runs=1,
 ) as dag:
     # Task 0: Create temporary folder if it does not exist
     temp_folder_task = PythonOperator(
