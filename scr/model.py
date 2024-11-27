@@ -2,69 +2,91 @@ import os
 from datetime import datetime, timedelta
 import pandas as pd
 import psycopg2
+import boto3
+from io import StringIO
 from dotenv import load_dotenv
 
 def ensure_temp_folder_exists(folder_path: str):
     """Ensure that the temporary folder exists."""
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
-
-def filter_active_advertiser_views(ads_views_path: str, advertiser_path: str, output_folder: str) -> str:
+    
+def filter_active_advertiser_views(bucket_name: str, 
+                                   s3_client,
+                                   output_folder: str) -> str:
     """Filter view logs for active advertisers and write to a temporary folder."""
-    ads_view = pd.read_csv(ads_views_path)
-    active_advertisers = pd.read_csv(advertiser_path)
+    ads_view = read_file_from_s3(bucket_name, 'ads_views.csv', s3_client)
+    active_advertisers = read_file_from_s3(bucket_name, 'advertiser_ids.csv', s3_client)
     
     filtered_views = ads_view[ads_view['advertiser_id'].isin(active_advertisers['advertiser_id'])]
-    output_path = os.path.join(output_folder, 'active_ads_views.csv')
-    filtered_views.to_csv(output_path, index=False)
-    return output_path
 
-def filter_active_advertiser_products(product_views_path: str, advertiser_path: str, output_folder: str) -> str:
+    output_key = f"{output_folder}/active_ads_views.csv"
+    write_file_to_s3(filtered_views, bucket_name, output_key, s3_client)
+    return output_key 
+
+def filter_active_advertiser_products(bucket_name: str, 
+                                      s3_client,
+                                      output_folder: str) -> str:
     """Filter product logs for active advertisers and write to a temporary folder."""
-    product_view = pd.read_csv(product_views_path)
-    active_advertisers = pd.read_csv(advertiser_path)
-    
-    filtered_products = product_view[product_view['advertiser_id'].isin(active_advertisers['advertiser_id'])]
-    output_path = os.path.join(output_folder, 'active_product_views.csv')
-    filtered_products.to_csv(output_path, index=False)
-    return output_path
+    product_view = read_file_from_s3(bucket_name, 'product_views.csv', s3_client)
+    active_advertisers = read_file_from_s3(bucket_name, 'advertiser_ids.csv', s3_client)
 
-def compute_top_ctr(active_ads_views_path: str, output_folder: str, execution_date: datetime.date) -> str:
+    filtered_products = product_view[product_view['advertiser_id'].isin(active_advertisers['advertiser_id'])]
+
+    output_key = f"{output_folder}/active_product_views.csv"
+    write_file_to_s3(filtered_products, bucket_name, output_key, s3_client)
+    return output_key
+
+
+def compute_top_ctr(bucket_name: str, 
+                    s3_client,
+                    output_folder: str,
+                    active_ads_views_path: str, 
+                    execution_date: datetime.date) -> str:
     """Compute TopCTR model and write results to a temporary folder."""
-    active_ads_views = pd.read_csv(active_ads_views_path)
+    # active_ads_views = pd.read_csv(active_ads_views_path)
+    active_ads_views = read_file_from_s3(bucket_name, active_ads_views_path, s3_client)
     active_ads_views['is_click'] = (active_ads_views['type'] == 'click').astype(int)
     ctr = active_ads_views.groupby(['advertiser_id', 'product_id'])['is_click'].mean().reset_index()
     ctr.columns = ['advertiser_id', 'product_id', 'ctr']
     
     top_ctr = ctr.groupby('advertiser_id').apply(lambda x: x.nlargest(20, 'ctr')).reset_index(drop=True)
-    # top_ctr['date'] = datetime.today().date()
-    top_ctr['date'] = execution_date.date()
+    top_ctr['date'] = execution_date
     top_ctr['model'] = 'top_ctr'
-    output_path = os.path.join(output_folder, 'top_ctr.csv')
-    top_ctr.to_csv(output_path, index=False)
-    return output_path
 
-def compute_top_product(active_product_views_path: str, output_folder: str, execution_date: datetime.date) -> str:
+    output_key = f"{output_folder}/top_ctr.csv"
+    write_file_to_s3(top_ctr, bucket_name, output_key, s3_client)
+    return output_key
+
+def compute_top_product(bucket_name: str, 
+                        s3_client,
+                        output_folder: str,
+                        active_product_views_path: str, 
+                        execution_date: datetime.date) -> str:
     """Compute TopProduct model and write results to a temporary folder."""
-    active_product_views = pd.read_csv(active_product_views_path)
+
+    active_product_views = read_file_from_s3(bucket_name, active_product_views_path, s3_client)
     top_product = active_product_views.groupby(['advertiser_id', 'product_id']).size().reset_index(name='view_count')
     
     top_products = top_product.groupby('advertiser_id').apply(lambda x: x.nlargest(20, 'view_count')).reset_index(drop=True)
-    # top_products['date'] = datetime.today().date()
-    top_products['date'] = execution_date.date()
+    top_products['date'] = execution_date
     top_products['model'] = 'top_product'
-    output_path = os.path.join(output_folder, 'top_products.csv')
-    top_products.to_csv(output_path, index=False)
-    return output_path
 
+    output_key = f"{output_folder}/top_products.csv"
+    write_file_to_s3(top_products, bucket_name, output_key, s3_client)
+    return output_key
 
-
-def write_to_db(top_ctr_path: str, top_product_path: str, db_config: dict):
+def write_to_db(bucket_name: str, 
+                s3_client,
+                output_folder: str,
+                top_ctr_path: str, 
+                top_product_path: str, 
+                db_config: dict):
     """Write model results to PostgreSQL database."""
-    # Load the results from CSV
-    top_ctr = pd.read_csv(top_ctr_path)
-    top_product = pd.read_csv(top_product_path)
-
+    # Load the results
+    top_ctr = read_file_from_s3(bucket_name, top_ctr_path, s3_client)
+    top_product = read_file_from_s3(bucket_name, top_product_path, s3_client)
+    
     # Connect to PostgreSQL
     try:
         connection = psycopg2.connect(**db_config)
@@ -114,6 +136,25 @@ def insert_recommendations(cursor, data, metric_column, date_format='%Y-%m-%d'):
         except ValueError as e:
             print(f"Skipping row due to error: {e}")
 
+
+
+
+def read_file_from_s3(bucket_name: str, file_key: str, s3_client) -> pd.DataFrame:
+    """
+    Read a CSV file from an S3 bucket and return a pandas DataFrame.
+    """
+    file_object = s3_client.get_object(Bucket=bucket_name, Key=file_key)
+    file_content = file_object['Body'].read().decode('utf-8')
+    df = pd.read_csv(StringIO(file_content))
+    return df
+
+def write_file_to_s3(df: pd.DataFrame, bucket_name: str, file_key: str, s3_client):
+    """Write a DataFrame to a CSV file in S3."""
+    csv_buffer = StringIO()
+    df.to_csv(csv_buffer, index=False)
+    s3_client.put_object(Bucket=bucket_name, Key=file_key, Body=csv_buffer.getvalue())
+
+
 if __name__ == '__main__':
 
     # Load the appropriate .env file based on the environment
@@ -125,35 +166,61 @@ if __name__ == '__main__':
         'user': os.getenv('DB_USER'),
         'password': os.getenv('DB_PASSWORD'),
         'host': os.getenv('DB_HOST'),
-        'port': int(os.getenv('DB_PORT'))
+        'port': int(os.getenv('DB_PORT')),
     }
+
+    BUCKET_NAME= os.getenv('BUCKET_NAME')
     
-    # Paths
-    ads_views_path = 'tmp/data/ads_views.csv'
-    advertiser_path = 'tmp/data/advertiser_ids.csv'
-    product_views_path = 'tmp/data/product_views.csv'
-    temp_folder = 'tmp/temp_data'
+    s3_client = boto3.client(
+        's3',
+        region_name=os.getenv('REGION_NAME'),
+        aws_access_key_id=os.getenv('ACCESS_KEY'),
+        aws_secret_access_key=os.getenv('SECRET_KEY')
+    )
+
+    # Files
+    # ads_views_input = 'ads_views.csv'
+    # advertiser_input = 'advertiser_ids.csv'
+    # product_views_input = 'product_views.csv'
+    temp_folder = 'temp_data'
 
     # Ensure temp folder exists
     ensure_temp_folder_exists(temp_folder)
     
     # Test filter_active_advertiser_views
-    active_ads_views_path = filter_active_advertiser_views(ads_views_path, advertiser_path, temp_folder)
+    active_ads_views_path = filter_active_advertiser_views(BUCKET_NAME, 
+                                                           s3_client, 
+                                                           temp_folder)
     print(f"Active advertiser views saved to: {active_ads_views_path}")
     
     # Test filter_active_advertiser_products
-    active_product_views_path = filter_active_advertiser_products(product_views_path, advertiser_path, temp_folder)
+    active_product_views_path = filter_active_advertiser_products(BUCKET_NAME, 
+                                                                  s3_client,
+                                                                  temp_folder)
     print(f"Active advertiser products saved to: {active_product_views_path}")
     
     # Test compute_top_ctr
-    top_ctr_path = compute_top_ctr(active_ads_views_path, temp_folder, execution_date)
+    top_ctr_path = compute_top_ctr(BUCKET_NAME, 
+                                   s3_client, 
+                                   temp_folder, 
+                                   active_ads_views_path,
+                                   execution_date)
     print(f"TopCTR results saved to: {top_ctr_path}")
     
     # Test compute_top_product
-    top_product_path = compute_top_product(active_product_views_path, temp_folder, execution_date)
+    top_product_path = compute_top_product(BUCKET_NAME,
+                                           s3_client,
+                                           temp_folder, 
+                                           active_product_views_path,
+                                           execution_date)
     print(f"TopProduct results saved to: {top_product_path}")
 
-    write_to_db(top_ctr_path, top_product_path, DB_CONFIG)
+    write_to_db(BUCKET_NAME,
+                s3_client,
+                temp_folder, 
+                top_ctr_path, 
+                top_product_path, 
+                DB_CONFIG)
     print("Results written to database.")
 
 
