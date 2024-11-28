@@ -11,13 +11,12 @@ os.chdir(project_path)
 # Adding the parent directory of 'scr' to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from scr.model import (
-    ensure_temp_folder_exists,
+from scr.utils.utils import ensure_temp_folder_exists, write_to_db
+from scr.model.model import (
     filter_active_advertiser_views,
     filter_active_advertiser_products,
     compute_top_ctr,
-    compute_top_product,
-    write_to_db,
+    compute_top_product
 )
 load_dotenv()
 # Database configuration
