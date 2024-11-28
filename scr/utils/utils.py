@@ -6,12 +6,6 @@ from dateutil.parser import parse
 import psycopg2
 
 
-def ensure_temp_folder_exists(folder_path: str):
-    """Ensure that the temporary folder exists."""
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
-
-
 def read_file_from_s3(bucket_name: str, file_key: str, s3_client) -> pd.DataFrame:
     """
     Read a CSV file from an S3 bucket and return a pandas DataFrame.

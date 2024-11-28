@@ -5,7 +5,7 @@ import pandas as pd
 import boto3
 from dotenv import load_dotenv
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from utils.utils import ensure_temp_folder_exists, read_file_from_s3, write_file_to_s3, write_to_db
+from utils.utils import read_file_from_s3, write_file_to_s3, write_to_db
 
     
 def filter_active_advertiser_views(bucket_name: str, 
@@ -95,9 +95,6 @@ if __name__ == '__main__':
         aws_secret_access_key=os.getenv('SECRET_KEY')
     )
     temp_folder = 'temp_data'
-
-    # Ensure temp folder exists
-    ensure_temp_folder_exists(temp_folder)
     
     # Test filter_active_advertiser_views
     active_ads_views_path = filter_active_advertiser_views(BUCKET_NAME, 

@@ -6,12 +6,10 @@ import os
 import boto3
 from dotenv import load_dotenv
 
-project_path = '/Users/santiagoromano/Documents/code/AdTech'
-os.chdir(project_path)
 # Adding the parent directory of 'scr' to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from scr.utils.utils import ensure_temp_folder_exists, write_to_db
+from scr.utils.utils import write_to_db
 from scr.model.model import (
     filter_active_advertiser_views,
     filter_active_advertiser_products,
@@ -45,13 +43,6 @@ with DAG(
     catchup=True,  # False: Do not backfill missing runs
     max_active_runs=1,
     ) as dag:
-    # Task 0: Ensure temp folder exists
-    temp_folder_task = PythonOperator(
-        task_id='create_temp_folder',
-        python_callable=ensure_temp_folder_exists,
-        op_kwargs={'folder_path': 'temp_data'},
-    )
-
     # Task 1: Filter active advertiser views
     filter_views_task = PythonOperator(
         task_id='filter_active_advertiser_views',
@@ -117,7 +108,6 @@ with DAG(
     )
 
     # Task Dependencies
-    temp_folder_task >> [filter_views_task, filter_products_task]
     filter_views_task >> compute_top_ctr_task
     filter_products_task >> compute_top_product_task
     [compute_top_ctr_task, compute_top_product_task] >> write_to_db_task
