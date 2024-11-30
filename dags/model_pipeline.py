@@ -75,7 +75,7 @@ with DAG(
             's3_client': s3_client,
             'output_folder': 'temp_data',
             'active_ads_views_path': "{{ ti.xcom_pull(task_ids='filter_active_advertiser_views') }}",
-            'execution_date': "{{ execution_date }}",
+            'execution_date': "{{ macros.ds_add(ds, 1) }}",
         },
     )
 
@@ -89,7 +89,7 @@ with DAG(
             's3_client': s3_client,
             'output_folder': 'temp_data',
             'active_product_views_path': "{{ ti.xcom_pull(task_ids='filter_active_advertiser_products') }}",
-            'execution_date': "{{ execution_date }}",
+            'execution_date': "{{ macros.ds_add(ds, 1) }}",
         },
     )
 
