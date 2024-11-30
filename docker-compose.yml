@@ -4,7 +4,7 @@ services:
   fastapi:
     build: .
     ports:
-      - "8001:8000"
+      - "8000:8000"
     environment:
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
