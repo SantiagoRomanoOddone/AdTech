@@ -1,6 +1,6 @@
 # AdTech
 
-![AdTech Image](image/ad-tech.jpg)
+![AdTech Image](images/ad-tech.jpg)
 
 # Project Setup Instructions
 
