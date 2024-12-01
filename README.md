@@ -35,9 +35,9 @@ The entire system is hosted on AWS and uses an Airflow pipeline to generate dail
 
 The system ensures up-to-date recommendations, making it easy to dynamically retrieve insights and drive advertising decisions.
 
-# Project Setup Instructions
+## Project Setup Instructions
 
-## Initial Setup
+### Initial Setup
 
 Follow these steps to set up the project environment for the first time:
 
