@@ -23,14 +23,17 @@ Using this data, the system calculates two types of recommendations:
 - **Top Products**: Recommends the most viewed products on the advertiser's website.  
 - **Top CTR Products**: Recommends products with the best ad performance, measured by Click-Through-Rate (CTR).  
 
-## System Overview
+### System Architecture
 
-- **Cloud Infrastructure**: Built on AWS.  
-- **Daily Pipeline**: Data is processed through an Airflow pipeline, which generates daily recommendations.  
-- **Database**: Results are stored in a PostgreSQL database hosted on AWS RDS.  
-- **API Access**: A REST API allows querying recommendations for specific advertisers, models, and dates. Additional endpoints enable interaction with the stored data.  
+The entire system is hosted on AWS and uses an Airflow pipeline to generate daily product recommendations for each advertiser. The recommendations are stored in a PostgreSQL database on the RDS service. An API is provided to query product recommendations by advertiser, model, or date. The pipeline runs daily to update the recommendations, which can then be accessed through the API.
 
-The pipeline ensures up-to-date recommendations, making it easy to dynamically retrieve insights and drive advertising decisions.
+### Key Features
+
+- **Daily Recommendations**: Generates daily product recommendations for each advertiser.
+- **API Access**: Provides endpoints to query product recommendations and interact with the data.
+- **AWS Integration**: Utilizes AWS services for hosting, data processing, and storage.
+
+The system ensures up-to-date recommendations, making it easy to dynamically retrieve insights and drive advertising decisions.
 
 # Project Setup Instructions
 
