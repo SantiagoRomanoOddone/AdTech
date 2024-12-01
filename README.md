@@ -3,7 +3,7 @@
 ![AdTech Image](images/ad-tech.jpg)
 
 
-**AD TECH** is a system designed to generate product recommendations for advertisers based on user interaction data. The project processes two types of input logs:
+**AdTech* is a system designed to generate product recommendations for advertisers based on user interaction data. The project processes two types of input logs:
 
 1. **Product View Logs**  
    Each entry represents a user viewing a product on an advertiser's website. These logs include:
