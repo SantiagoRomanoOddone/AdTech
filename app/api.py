@@ -57,17 +57,7 @@ def get_stats():
         cursor.execute("SELECT COUNT(DISTINCT advertiser_id) AS advertiser_count FROM recommendations;")
         advertiser_count = cursor.fetchone()["advertiser_count"]
 
-        # Query 2: Advertisers with the most daily recommendation changes
-        cursor.execute("""
-        SELECT advertiser_id, COUNT(DISTINCT date) AS change_count
-        FROM recommendations
-        GROUP BY advertiser_id
-        ORDER BY change_count DESC
-        LIMIT 5;
-        """)
-        top_changing_advertisers = cursor.fetchall()
-
-        # Query 3: Matching statistics between models
+        # Query 2: Matching statistics between models
         cursor.execute("""
         SELECT r1.advertiser_id, COUNT(*) AS match_count
         FROM recommendations r1
@@ -83,7 +73,6 @@ def get_stats():
 
         return {
             "advertiser_count": advertiser_count,
-            "top_changing_advertisers": top_changing_advertisers,
             "matching_stats": matching_stats
         }
     finally:
